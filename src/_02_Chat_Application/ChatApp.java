@@ -1,6 +1,9 @@
 package _02_Chat_Application;
 
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.UnknownHostException;
@@ -29,6 +32,13 @@ public class ChatApp {
 	public void server(){
 		try {
 			ServerSocket server = new ServerSocket(8080);
+			JOptionPane.showMessageDialog(null, "IP: " + getIPAddress());
+			System.out.println("Waiting to connect...");
+			Socket socket = server.accept();
+			System.out.println("Connected");
+			
+			write(socket);
+			
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -40,7 +50,6 @@ public class ChatApp {
 		
 		try {
 			Socket socket = new Socket(ip, port);
-			write(socket);
 			recieve(socket);
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -49,10 +58,29 @@ public class ChatApp {
 	}
 	
 	public void write(Socket socket) {
-		
+		try {
+			DataOutputStream output = new DataOutputStream(socket.getOutputStream());
+			String message = JOptionPane.showInputDialog("Message");
+			output.writeUTF(message);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 	}
 	
 	public void recieve(Socket socket) {
-		
+		try {
+			DataInputStream input = new DataInputStream(socket.getInputStream());
+			JOptionPane.showMessageDialog(null, input.readUTF());
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+	
+	public String getIPAddress() {
+		try {
+			return InetAddress.getLocalHost().getHostAddress();
+		} catch (UnknownHostException e) {
+			return "ERROR!!!!!";
+		}
 	}
 }
