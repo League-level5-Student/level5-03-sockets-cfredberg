@@ -15,6 +15,8 @@ import javax.swing.JOptionPane;
  */
 
 public class ChatApp {
+	boolean running = true;
+	
 	public static void main(String[] args) {
 		ChatApp app = new ChatApp();
 		app.run();
@@ -31,13 +33,29 @@ public class ChatApp {
 	
 	public void server(){
 		try {
+			System.out.println("Server");
 			ServerSocket server = new ServerSocket(8080);
 			JOptionPane.showMessageDialog(null, "IP: " + getIPAddress());
 			System.out.println("Waiting to connect...");
 			Socket socket = server.accept();
 			System.out.println("Connected");
+			System.out.println("IMPORTANT: Type <Terminate> to end conversation");
 			
-			write(socket);
+			Thread writer = new Thread(() -> write(socket, "Server"));
+			Thread reader = new Thread(() -> recieve(socket));
+			
+			writer.start();
+			reader.start();
+			
+			while(running) {
+				try {
+					Thread.sleep(10);
+				} catch (InterruptedException e) {
+					e.printStackTrace();
+				}
+			}
+			server.close();
+			System.exit(0);
 			
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -45,34 +63,63 @@ public class ChatApp {
 	}
 	
 	public void client() {
+		System.out.println("Client");
 		String ip = JOptionPane.showInputDialog("Server IP");
 		int port = Integer.parseInt(JOptionPane.showInputDialog("Port #"));
 		
+		System.out.println("Connected");
+		System.out.println("IMPORTANT: Type <Terminate> to end conversation");
+		
 		try {
 			Socket socket = new Socket(ip, port);
-			recieve(socket);
+			
+			Thread writer = new Thread(() -> write(socket, "Client"));
+			Thread reader = new Thread(() -> recieve(socket));
+			
+			writer.start();
+			reader.start();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
 		
 	}
 	
-	public void write(Socket socket) {
-		try {
-			DataOutputStream output = new DataOutputStream(socket.getOutputStream());
-			String message = JOptionPane.showInputDialog("Message");
-			output.writeUTF(message);
-		} catch (IOException e) {
-			e.printStackTrace();
+	public void write(Socket socket, String device) {
+		while(running) {
+			try {
+				DataOutputStream output = new DataOutputStream(socket.getOutputStream());
+				String message = JOptionPane.showInputDialog(device + "'s Message");
+				output.writeUTF(message);
+				
+				if (message.equals("<Terminate>")) {
+					System.out.println("-------------------- Connection Terminated --------------------");
+					running = false;
+					continue;
+				}
+				System.out.println("You  said: " + message);
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
 		}
 	}
 	
 	public void recieve(Socket socket) {
-		try {
-			DataInputStream input = new DataInputStream(socket.getInputStream());
-			JOptionPane.showMessageDialog(null, input.readUTF());
-		} catch (IOException e) {
-			e.printStackTrace();
+		while(running) {
+			try {
+				DataInputStream input = new DataInputStream(socket.getInputStream());
+				
+				String message = input.readUTF();
+				
+				if (message.equals("<Terminate>")) {
+					System.out.println("-------------------- Connection Terminated --------------------");
+					running = false;
+					continue;
+				}
+				
+				System.out.println("They said: " + message);
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
 		}
 	}
 	
